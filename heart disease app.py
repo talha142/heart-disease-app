@@ -100,6 +100,7 @@ elif page == "EDA":
 
 
 # -------------------- Page 3: Prediction --------------------
+# -------------------- Page 3: Prediction --------------------
 elif page == "Prediction":
     st.title("🤖 Predict Heart Disease")
 
@@ -121,28 +122,59 @@ elif page == "Prediction":
 
     st.markdown("### 🧾 Enter Patient Info")
 
-    # Input fields with appropriate widgets
+    # Inputs with consistent numeric types (all float or all int)
+    # For binary variables: integer input 0 or 1
     user_input = {}
 
-    # Binary features: male, BPMeds, prevalentStroke, prevalentHyp
-    user_input['male'] = st.selectbox("Gender (male)", options=[0, 1], index=int(round(df['male'].mean())))
-    user_input['BPMeds'] = st.selectbox("On Blood Pressure Medication (BPMeds)", options=[0, 1], index=int(round(df['BPMeds'].mean())))
-    user_input['prevalentStroke'] = st.selectbox("History of Stroke (prevalentStroke)", options=[0, 1], index=int(round(df['prevalentStroke'].mean())))
-    user_input['prevalentHyp'] = st.selectbox("History of Hypertension (prevalentHyp)", options=[0, 1], index=int(round(df['prevalentHyp'].mean())))
-
-    # Numeric inputs
-    user_input['age'] = st.number_input("Age", min_value=20, max_value=120, value=float(round(df['age'].mean(), 2)))
-    user_input['cigsPerDay'] = st.number_input("Cigarettes Per Day", min_value=0, max_value=100, value=float(round(df['cigsPerDay'].mean(), 2)))
-    user_input['totChol'] = st.number_input("Total Cholesterol (mg/dL)", min_value=100, max_value=600, value=float(round(df['totChol'].mean(), 2)))
-    user_input['sysBP'] = st.number_input("Systolic Blood Pressure", min_value=50, max_value=250, value=float(round(df['sysBP'].mean(), 2)))
-    user_input['diaBP'] = st.number_input("Diastolic Blood Pressure", min_value=30, max_value=150, value=float(round(df['diaBP'].mean(), 2)))
-    user_input['BMI'] = st.number_input("Body Mass Index (BMI)", min_value=10.0, max_value=60.0, value=float(round(df['BMI'].mean(), 2)))
+    user_input['male'] = st.number_input(
+        "Male (0 = Female, 1 = Male)", min_value=0, max_value=1, step=1, value=int(round(df['male'].mean()))
+    )
+    user_input['age'] = st.number_input(
+        "Age", min_value=20, max_value=120, value=int(round(df['age'].mean()))
+    )
+    user_input['cigsPerDay'] = st.number_input(
+        "Cigarettes Per Day", min_value=0.0, max_value=100.0, value=float(round(df['cigsPerDay'].mean(), 2))
+    )
+    user_input['BPMeds'] = st.number_input(
+        "On Blood Pressure Medication (0 = No, 1 = Yes)", min_value=0, max_value=1, step=1, value=int(round(df['BPMeds'].mean()))
+    )
+    user_input['prevalentStroke'] = st.number_input(
+        "Prevalent Stroke (0 = No, 1 = Yes)", min_value=0, max_value=1, step=1, value=int(round(df['prevalentStroke'].mean()))
+    )
+    user_input['prevalentHyp'] = st.number_input(
+        "Prevalent Hypertension (0 = No, 1 = Yes)", min_value=0, max_value=1, step=1, value=int(round(df['prevalentHyp'].mean()))
+    )
+    user_input['totChol'] = st.number_input(
+        "Total Cholesterol (mg/dL)", min_value=100.0, max_value=500.0, value=float(round(df['totChol'].mean(), 2))
+    )
+    user_input['sysBP'] = st.number_input(
+        "Systolic Blood Pressure (mmHg)", min_value=90.0, max_value=250.0, value=float(round(df['sysBP'].mean(), 2))
+    )
+    user_input['diaBP'] = st.number_input(
+        "Diastolic Blood Pressure (mmHg)", min_value=60.0, max_value=150.0, value=float(round(df['diaBP'].mean(), 2))
+    )
+    user_input['BMI'] = st.number_input(
+        "Body Mass Index (BMI)", min_value=10.0, max_value=60.0, value=float(round(df['BMI'].mean(), 2))
+    )
 
     if st.button("🚨 Predict"):
         try:
-            input_df = pd.DataFrame([user_input])
+            input_data = {
+                'male': int(user_input['male']),
+                'age': int(user_input['age']),
+                'cigsPerDay': float(user_input['cigsPerDay']),
+                'BPMeds': int(user_input['BPMeds']),
+                'prevalentStroke': int(user_input['prevalentStroke']),
+                'prevalentHyp': int(user_input['prevalentHyp']),
+                'totChol': float(user_input['totChol']),
+                'sysBP': float(user_input['sysBP']),
+                'diaBP': float(user_input['diaBP']),
+                'BMI': float(user_input['BMI']),
+            }
 
-            # Fill missing columns with training data means (if any)
+            input_df = pd.DataFrame([input_data])
+
+            # Fill missing columns with training data means if any columns are missing
             for col in X_train.columns:
                 if col not in input_df.columns:
                     input_df[col] = X_train[col].mean()
@@ -159,8 +191,9 @@ elif page == "Prediction":
                 st.success("✅ LOW risk of heart disease.")
             st.info(f"Model Accuracy: {acc * 100:.2f}%")
 
-        except Exception as e:
-            st.error(f"Error: {e}")
+        except ValueError:
+            st.error("Please enter valid numeric values for all inputs.")
+
 
 # -------------------- Page 4: Classification --------------------
 elif page == "Classification":
