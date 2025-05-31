@@ -55,10 +55,15 @@ if page == "Home":
 
     ### 📊 Age-wise Distribution (Example Table):
     """)
-    
-    age_bins = pd.cut(df['age'], bins=[20, 30, 40, 50, 60, 70, 80])
+
+    # Define proper age bins for grouping
+    bins = [20, 29, 39, 49, 59, 69, 79, 89]
+    labels = ['20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80-89']
+    age_bins = pd.cut(df['age'], bins=bins, labels=labels, right=True)
+
     age_group_stats = df.groupby(age_bins)["TenYearCHD"].mean().reset_index()
-    st.dataframe(age_group_stats.rename(columns={"TenYearCHD": "Heart Disease Rate"}))
+    age_group_stats.rename(columns={"age": "Age Group", "TenYearCHD": "Heart Disease Rate"}, inplace=True)
+    st.dataframe(age_group_stats)
 
     st.markdown("### 🛡️ Prevention Tips:")
     st.markdown("""
@@ -115,9 +120,21 @@ elif page == "Prediction":
     acc = accuracy_score(y_test, y_pred)
 
     st.markdown("### 🧾 Enter Patient Info")
+
+    # Input features to use
+    input_features = ['male', 'age', 'cigsPerDay', 'BPMeds', 'prevalentStroke', 'prevalentHyp', 
+                      'totChol', 'sysBP', 'diaBP', 'BMI']
     user_input = {}
-    for col in X.columns:
-        user_input[col] = st.slider(col, float(df[col].min()), float(df[col].max()), float(df[col].mean()))
+
+    for col in input_features:
+        min_val = float(df[col].min())
+        max_val = float(df[col].max())
+        mean_val = float(df[col].mean())
+        if col in ['male', 'BPMeds', 'prevalentStroke', 'prevalentHyp']:  # binary / categorical as int sliders
+            user_input[col] = st.slider(col, int(min_val), int(max_val), int(round(mean_val)))
+        else:
+            user_input[col] = st.slider(col, min_val, max_val, mean_val)
+
     input_df = pd.DataFrame([user_input])
 
     if st.button("🚨 Predict"):
