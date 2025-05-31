@@ -4,166 +4,198 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-from sklearn.feature_selection import f_classif
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_selection import SelectKBest, f_classif
 
-# Sidebar navigation
-st.sidebar.title("Heart Disease ML Web App")
+# Page setup
+st.set_page_config(page_title="Heart Disease Prediction App", layout="wide")
+
+# Sidebar Navigation
 pages = ["Home", "EDA", "Prediction", "Classification", "About"]
-page = st.sidebar.radio("Navigate", pages)
+page = st.sidebar.selectbox("Select Page", pages)
 
-# File uploader
-uploaded_file = st.sidebar.file_uploader("Upload CSV Dataset", type=["csv"])
-if uploaded_file:
+# Global dataset
+@st.cache_data
+
+def load_data(uploaded_file):
     df = pd.read_csv(uploaded_file)
+    return df
 
-    # Data cleaning
-    df = df.dropna()
-    le = LabelEncoder()
-    for col in df.select_dtypes(include='object').columns:
-        df[col] = le.fit_transform(df[col])
+# HOME PAGE
+if page == "Home":
+    st.title("Heart Disease Prediction Web Application")
+    st.markdown("""
+    ### What is Heart Disease?
+    Heart disease describes a range of conditions that affect your heart. Diseases under the heart disease umbrella include blood vessel diseases, such as coronary artery disease; heart rhythm problems (arrhythmias); and heart defects you're born with (congenital heart defects), among others.
 
-    # Train/test split
-    X = df.drop('TenYearCHD', axis=1)
-    y = df['TenYearCHD']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    ### Common Symptoms:
+    - Chest pain
+    - Shortness of breath
+    - Pain, numbness, weakness or coldness in your legs or arms
+    - Pain in the neck, jaw, throat, upper abdomen or back
 
-    # ANOVA F-test for top 10 features
-    f_values, _ = f_classif(X_train, y_train)
-    feature_scores = pd.Series(f_values, index=X.columns).sort_values(ascending=False)
-    top_features = feature_scores.head(10).index.tolist()
+    ### Common Causes and Risk Factors:
+    - High blood pressure
+    - Smoking
+    - Diabetes
+    - Obesity
+    - Lack of exercise
 
-    if page == "Home":
-        st.title("🏥 Web Application for Heart Disease using ML")
-        st.markdown("""
-        ### 💓 What is Heart Disease?
-        Heart disease describes a range of conditions that affect your heart. Diseases under the heart disease umbrella include:
-        - Blood vessel diseases (e.g., coronary artery disease)
-        - Heart rhythm problems (arrhythmias)
-        - Heart defects you're born with (congenital heart defects)
+    ### Global Risk Table by Age Group
+    """)
 
-        ### ⚠️ Symptoms
-        - Chest pain
-        - Shortness of breath
-        - Pain, numbness, or coldness in legs or arms
+    data = {
+        "Age Group": ["<30", "30-40", "40-50", "50-60", ">60"],
+        "Prevalence %": [5, 12, 25, 35, 23]
+    }
+    st.table(pd.DataFrame(data))
 
-        ### 🌍 Global Impact by Age Group
-        """)
+    st.markdown("""
+    ### Prevention:
+    - Regular health screenings
+    - Healthy eating
+    - Quit smoking
+    - Regular physical activity
+    - Managing stress
+    """)
 
-        age_bins = [20, 30, 40, 50, 60, 70, 80]
-        df['AgeGroup'] = pd.cut(df['age'], bins=age_bins)
-        st.bar_chart(df.groupby('AgeGroup')['TenYearCHD'].mean())
-
-        st.markdown("""
-        ### 🛡️ Prevention Tips
-        - Eat a healthy diet
-        - Exercise regularly
-        - Avoid smoking
-        - Control high blood pressure, cholesterol, and diabetes
-        """)
-
-    elif page == "EDA":
-        st.title("📊 Exploratory Data Analysis")
-        st.subheader("Raw Dataset")
-        st.dataframe(df.head())
+# EDA PAGE
+elif page == "EDA":
+    st.title("Exploratory Data Analysis")
+    uploaded_file = st.file_uploader("Upload your dataset", type=["csv"])
+    if uploaded_file:
+        df = load_data(uploaded_file)
+        st.subheader("Cleaned Data Preview")
+        st.write(df.head())
 
         st.subheader("Summary Statistics")
         st.write(df.describe())
 
-        st.subheader("Heatmap")
-        fig, ax = plt.subplots()
-        sns.heatmap(df.corr(), annot=True, cmap='coolwarm', ax=ax)
-        st.pyplot(fig)
+        st.subheader("Correlation Heatmap")
+        plt.figure(figsize=(10, 6))
+        sns.heatmap(df.corr(), annot=True, fmt=".2f", cmap="coolwarm")
+        st.pyplot(plt.gcf())
 
-        st.subheader("Bar Chart - Heart Disease by Gender")
-        fig, ax = plt.subplots()
-        df.groupby('male')['TenYearCHD'].mean().plot(kind='bar', ax=ax)
-        ax.set_xlabel('Male (0=Female, 1=Male)')
-        ax.set_ylabel('Heart Disease Rate')
-        st.pyplot(fig)
+        st.subheader("Bar Chart: Gender Distribution")
+        st.bar_chart(df['male'].value_counts())
 
-    elif page == "Prediction":
-        st.title("🔮 Predict Heart Disease Risk")
-        st.sidebar.subheader("Select ML Model")
-        model_name = st.sidebar.selectbox("Choose Model", 
-                                          ["Logistic Regression", "Decision Tree", "Random Forest", "Gradient Boosting"])
+        st.subheader("Line Chart: Age vs Cholesterol")
+        st.line_chart(df[['age', 'totChol']].sort_values(by='age'))
 
-        if model_name == "Logistic Regression":
-            model = LogisticRegression(max_iter=1000)
-        elif model_name == "Decision Tree":
-            model = DecisionTreeClassifier()
-        elif model_name == "Random Forest":
+# PREDICTION PAGE
+elif page == "Prediction":
+    st.title("Heart Disease Prediction")
+    uploaded_file = st.file_uploader("Upload your dataset", type=["csv"])
+    if uploaded_file:
+        df = load_data(uploaded_file)
+
+        # Selected features
+        features = ['male', 'age', 'cigsPerDay', 'BPMeds', 'prevalentStroke',
+                    'prevalentHyp', 'totChol', 'sysBP', 'diaBP', 'BMI']
+
+        st.subheader("Enter Input Features")
+        col1, col2 = st.columns(2)
+        with col1:
+            male = st.selectbox("Gender", [0, 1])
+            age = st.number_input("Age", min_value=1, max_value=120, value=50)
+            cigsPerDay = st.number_input("Cigarettes per Day", min_value=0, value=5)
+            BPMeds = st.selectbox("Blood Pressure Meds", [0, 1])
+            prevalentStroke = st.selectbox("Prevalent Stroke", [0, 1])
+        with col2:
+            prevalentHyp = st.selectbox("Prevalent Hypertension", [0, 1])
+            totChol = st.number_input("Total Cholesterol", min_value=100, value=200)
+            sysBP = st.number_input("Systolic BP", min_value=90, value=120)
+            diaBP = st.number_input("Diastolic BP", min_value=60, value=80)
+            BMI = st.number_input("BMI", min_value=10.0, max_value=50.0, value=25.0)
+
+        user_data = pd.DataFrame([[male, age, cigsPerDay, BPMeds, prevalentStroke,
+                                   prevalentHyp, totChol, sysBP, diaBP, BMI]],
+                                 columns=features)
+
+        st.subheader("Select Model")
+        model_option = st.selectbox("Choose Classifier", ["Logistic Regression", "Random Forest", "Decision Tree", "Gradient Boosting"])
+
+        if st.button("Predict"):
+            df.dropna(inplace=True)
+            X = df[features]
+            y = df['TenYearCHD']
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+            if model_option == "Logistic Regression":
+                model = LogisticRegression()
+            elif model_option == "Random Forest":
+                model = RandomForestClassifier()
+            elif model_option == "Decision Tree":
+                model = DecisionTreeClassifier()
+            else:
+                model = GradientBoostingClassifier()
+
+            model.fit(X_train, y_train)
+            prediction = model.predict(user_data)
+            accuracy = model.score(X_test, y_test)
+
+            st.success(f"Prediction: {'Heart Disease' if prediction[0] == 1 else 'No Heart Disease'}")
+            st.info(f"Model Accuracy: {accuracy:.2f}")
+
+# CLASSIFICATION PAGE
+elif page == "Classification":
+    st.title("Model Classification Report")
+    uploaded_file = st.file_uploader("Upload your dataset", type=["csv"])
+    if uploaded_file:
+        df = load_data(uploaded_file)
+        df.dropna(inplace=True)
+        target = 'TenYearCHD'
+
+        st.subheader("Select Model")
+        model_option = st.selectbox("Choose Model", ["Logistic Regression", "Random Forest", "Decision Tree", "Gradient Boosting"])
+        X = df.drop(columns=[target])
+        y = df[target]
+
+        # Encode categoricals
+        for col in X.select_dtypes(include='object').columns:
+            le = LabelEncoder()
+            X[col] = le.fit_transform(X[col])
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+        if model_option == "Logistic Regression":
+            model = LogisticRegression()
+        elif model_option == "Random Forest":
             model = RandomForestClassifier()
+        elif model_option == "Decision Tree":
+            model = DecisionTreeClassifier()
         else:
             model = GradientBoostingClassifier()
 
-        model.fit(X_train[top_features], y_train)
-        y_pred = model.predict(X_test[top_features])
-        acc = accuracy_score(y_test, y_pred)
-
-        st.markdown("### 🧾 Enter Patient Details")
-        user_input = {}
-        for i in range(0, len(top_features), 2):
-            cols = st.columns(2)
-            for j in range(2):
-                if i + j < len(top_features):
-                    col = top_features[i + j]
-                    if df[col].nunique() < 10 and df[col].dtype in [np.int64, np.int32, object]:
-                        user_input[col] = cols[j].selectbox(f"{col}", sorted(df[col].unique()))
-                    else:
-                        user_input[col] = cols[j].number_input(f"{col}", float(df[col].min()), float(df[col].max()), float(df[col].mean()))
-
-        input_df = pd.DataFrame([user_input])
-        if st.button("🚨 Predict"):
-            pred = model.predict(input_df)[0]
-            st.subheader("📢 Prediction Result:")
-            if pred == 1:
-                st.error("⚠️ High Risk of Heart Disease")
-            else:
-                st.success("✅ Low Risk of Heart Disease")
-            st.info(f"Model Accuracy: {acc * 100:.2f}%")
-
-    elif page == "Classification":
-        st.title("📈 Model Evaluation")
-        st.subheader("Choose Model for Classification")
-        clf_name = st.selectbox("Model", ["Logistic Regression", "Decision Tree", "Random Forest", "Gradient Boosting"])
-
-        if clf_name == "Logistic Regression":
-            clf = LogisticRegression(max_iter=1000)
-        elif clf_name == "Decision Tree":
-            clf = DecisionTreeClassifier()
-        elif clf_name == "Random Forest":
-            clf = RandomForestClassifier()
-        else:
-            clf = GradientBoostingClassifier()
-
-        clf.fit(X_train[top_features], y_train)
-        y_pred = clf.predict(X_test[top_features])
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
 
         st.subheader("Classification Report")
         st.text(classification_report(y_test, y_pred))
 
         st.subheader("Confusion Matrix")
         cm = confusion_matrix(y_test, y_pred)
-        fig, ax = plt.subplots()
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
-        st.pyplot(fig)
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+        st.pyplot(plt.gcf())
 
-    elif page == "About":
-        st.title("ℹ️ About Project")
-        st.markdown("""
-        This machine learning web app was built using:
+# ABOUT PAGE
+elif page == "About":
+    st.title("About the Project")
+    st.markdown("""
+    ### Project Objective:
+    This web application helps users analyze and predict the risk of heart disease using machine learning models. It offers exploratory data analysis, prediction with different models, and performance evaluation tools.
 
-        - Python 🐍
-        - Streamlit 📺
-        - Pandas, NumPy, Matplotlib, Seaborn 📊
-        - Scikit-learn for ML modeling 🤖
+    ### Technologies Used:
+    - Python
+    - Streamlit
+    - Pandas, NumPy
+    - Matplotlib, Seaborn
+    - Scikit-learn
 
-        **Dataset Source:** [Kaggle](https://www.kaggle.com/datasets/)
-        """)
-else:
-    st.warning("Please upload a dataset to begin.")
+    ### Data Source:
+    - [Kaggle - Framingham Heart Study Dataset](https://www.kaggle.com/datasets/)
+    """)
