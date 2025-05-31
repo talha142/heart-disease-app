@@ -1,68 +1,44 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import accuracy_score
+st.markdown("""
+# ❤️ Welcome to the Heart Disease Prediction App
 
-# Title
-st.title("🧠 Heart Disease Prediction")
+Heart disease refers to several types of heart conditions, including coronary artery disease, which can lead to heart attack. It is one of the **leading causes of death worldwide**, but with early detection and lifestyle changes, many types of heart disease can be prevented or managed effectively.
 
-# Load dataset
-@st.cache_data
-def load_data():
-    return pd.read_csv("framingham_1.csv")
+---
 
-df = load_data()
-df = df.dropna()  # Drop missing values
+## 🩺 What is Heart Disease?
 
-# Features and target
-X = df.drop("TenYearCHD", axis=1)
-y = df["TenYearCHD"]
+Heart disease (cardiovascular disease) includes conditions that affect the heart's structure and function. It typically involves **narrow or blocked blood vessels** that can lead to heart attacks, chest pain (angina), or strokes.
 
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+---
 
-# Sidebar model selection
-st.sidebar.header("🔍 Model Selection")
-model_name = st.sidebar.selectbox("Choose a model", ["Logistic Regression", "Decision Tree", "Random Forest", "Gradient Boosting"])
+## ⚠️ Common Symptoms
 
-# Model selection
-if model_name == "Logistic Regression":
-    model = LogisticRegression(max_iter=1000)
-elif model_name == "Decision Tree":
-    model = DecisionTreeClassifier()
-elif model_name == "Random Forest":
-    model = RandomForestClassifier()
-else:
-    model = GradientBoostingClassifier()
+- Chest pain or discomfort
+- Shortness of breath
+- Pain in the neck, jaw, throat, upper belly, or back
+- Fatigue or dizziness
+- Irregular heartbeat
 
-# Train the selected model
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
+**Note:** Some people may experience no symptoms until the disease is advanced.
 
-# User input for prediction
-st.markdown("### 🧾 Enter Patient Information")
+---
 
-input_data = {}
-for col in X.columns:
-    col_min = float(df[col].min())
-    col_max = float(df[col].max())
-    col_mean = float(df[col].mean())
-    input_data[col] = st.slider(label=col, min_value=col_min, max_value=col_max, value=col_mean)
+## 🛡️ How to Reduce Your Risk
 
-input_df = pd.DataFrame([input_data])
+- Maintain a healthy diet (low in saturated fats and sugars)
+- Exercise regularly (30 minutes a day)
+- Avoid smoking and limit alcohol
+- Manage stress and get enough sleep
+- Monitor and control blood pressure and cholesterol levels
+- Stay informed about family medical history
 
-# Predict button
-if st.button("🚨 Predict Heart Disease Risk"):
-    prediction = model.predict(input_df)[0]
-    st.subheader("🔍 Prediction Result:")
-    if prediction == 1:
-        st.error("⚠️ The model predicts a HIGH risk of heart disease.")
-    else:
-        st.success("✅ The model predicts a LOW risk of heart disease.")
-    
-    st.info(f"🧮 Model Accuracy: **{accuracy * 100:.2f}%**")
+---
+
+## 📊 Average Age of Heart Disease
+
+While heart disease can occur at any age, it is **most common in people aged 45 and above**. However, lifestyle choices and genetics can cause early onset in younger individuals as well.
+
+---
+
+Use the prediction tool below to assess your risk and take steps toward a healthier heart ❤️
+""")
