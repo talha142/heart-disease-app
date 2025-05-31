@@ -145,22 +145,23 @@ elif selected == "Prediction":
 
     if st.button("Predict"):
         if df is not None:
-            X = df[['male', 'age', 'cigsPerDay', 'BPMeds', 'prevalentStroke',
-                    'prevalentHyp', 'totChol', 'sysBP', 'diaBP', 'BMI']]
-            y = df['TenYearCHD']
+            with st.spinner("Training model and making prediction..."):
+                X = df[['male', 'age', 'cigsPerDay', 'BPMeds', 'prevalentStroke',
+                        'prevalentHyp', 'totChol', 'sysBP', 'diaBP', 'BMI']]
+                y = df['TenYearCHD']
 
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            if model_name == "Random Forest":
-                model = RandomForestClassifier()
-            elif model_name == "Decision Tree":
-                model = DecisionTreeClassifier()
-            else:
-                model = GradientBoostingClassifier()
+                if model_name == "Random Forest":
+                    model = RandomForestClassifier()
+                elif model_name == "Decision Tree":
+                    model = DecisionTreeClassifier()
+                else:
+                    model = GradientBoostingClassifier()
 
-            model.fit(X_train, y_train)
-            prediction = model.predict(input_df)[0]
-            accuracy = model.score(X_test, y_test)
+                model.fit(X_train, y_train)
+                prediction = model.predict(input_df)[0]
+                accuracy = model.score(X_test, y_test)
 
             st.success(f"Prediction: {'Heart Disease' if prediction == 1 else 'No Heart Disease'}")
             st.info(f"Model Accuracy: {accuracy * 100:.2f}%")
