@@ -3,7 +3,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import classification_report, confusion_matrix
@@ -69,21 +68,39 @@ elif selected == "EDA":
         st.subheader("Summary Statistics")
         st.write(df.describe())
 
+        st.subheader("Missing Values")
+        st.write(df.isnull().sum())
+
         st.subheader("Correlation Heatmap")
         plt.figure(figsize=(12, 6))
         sns.heatmap(df.corr(), annot=True, cmap="coolwarm")
         st.pyplot(plt.gcf())
 
-        st.subheader("Feature Distribution")
-        numeric_cols = df.select_dtypes(include='number').columns.tolist()
-        selected_feature = st.selectbox("Select Feature for Bar Plot", numeric_cols)
-        plt.figure()
-        sns.histplot(df[selected_feature], kde=True)
-        st.pyplot(plt.gcf())
+        st.subheader("Age vs Target")
+        if 'age' in df.columns and 'TenYearCHD' in df.columns:
+            plt.figure()
+            sns.boxplot(x='TenYearCHD', y='age', data=df)
+            st.pyplot(plt.gcf())
 
-        st.subheader("Line Chart")
-        line_feature = st.selectbox("Select Feature for Line Chart", numeric_cols)
-        st.line_chart(df[line_feature])
+        st.subheader("Gender vs Risk")
+        if 'male' in df.columns and 'TenYearCHD' in df.columns:
+            plt.figure()
+            sns.barplot(x='male', y='TenYearCHD', data=df)
+            st.pyplot(plt.gcf())
+
+        st.subheader("Smoking & Alcohol Impact")
+        if 'cigsPerDay' in df.columns and 'TenYearCHD' in df.columns:
+            plt.figure()
+            sns.boxplot(x='TenYearCHD', y='cigsPerDay', data=df)
+            st.pyplot(plt.gcf())
+
+        st.subheader("BP & Cholesterol vs Disease")
+        for col in ['sysBP', 'diaBP', 'totChol']:
+            if col in df.columns and 'TenYearCHD' in df.columns:
+                st.markdown(f"#### {col} vs TenYearCHD")
+                plt.figure()
+                sns.boxplot(x='TenYearCHD', y=col, data=df)
+                st.pyplot(plt.gcf())
     else:
         st.warning("Please upload a dataset to proceed.")
 
@@ -124,7 +141,7 @@ elif selected == "Prediction":
     input_df = pd.DataFrame([input_dict])
 
     st.subheader("Select Prediction Model")
-    model_name = st.selectbox("Choose Model", ["Logistic Regression", "Random Forest", "Decision Tree", "Gradient Boosting"])
+    model_name = st.selectbox("Choose Model", ["Random Forest", "Decision Tree", "Gradient Boosting"])
 
     if st.button("Predict"):
         if df is not None:
@@ -134,9 +151,7 @@ elif selected == "Prediction":
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            if model_name == "Logistic Regression":
-                model = LogisticRegression()
-            elif model_name == "Random Forest":
+            if model_name == "Random Forest":
                 model = RandomForestClassifier()
             elif model_name == "Decision Tree":
                 model = DecisionTreeClassifier()
@@ -157,7 +172,7 @@ elif selected == "Classification":
     st.title("Model Evaluation: Classification Report and Confusion Matrix")
 
     if df is not None:
-        model_choice = st.selectbox("Choose Model", ["Logistic Regression", "Random Forest", "Decision Tree", "Gradient Boosting"])
+        model_choice = st.selectbox("Choose Model", ["Random Forest", "Decision Tree", "Gradient Boosting"])
 
         X = df[['male', 'age', 'cigsPerDay', 'BPMeds', 'prevalentStroke',
                 'prevalentHyp', 'totChol', 'sysBP', 'diaBP', 'BMI']]
@@ -165,9 +180,7 @@ elif selected == "Classification":
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        if model_choice == "Logistic Regression":
-            model = LogisticRegression()
-        elif model_choice == "Random Forest":
+        if model_choice == "Random Forest":
             model = RandomForestClassifier()
         elif model_choice == "Decision Tree":
             model = DecisionTreeClassifier()
