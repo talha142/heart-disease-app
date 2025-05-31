@@ -211,4 +211,5 @@ elif selected == "About":
         - Multi-page Streamlit app
         - User-uploaded dataset
         - EDA, ML Prediction, and Model Evaluation
+    - **Author:** Akram (Final Year Student, Government College University Faisalabad)
     """)
