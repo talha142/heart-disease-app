@@ -53,17 +53,16 @@ if page == "Home":
     - Irregular heartbeat  
     - Swelling in legs or abdomen
 
-    ### 📊 Age-wise Distribution (Example Table):
+    ### 📊 Age-wise Distribution (Heart Disease Rate %):
     """)
 
-    # Define proper age bins for grouping
-    bins = [20, 29, 39, 49, 59, 69, 79, 89]
-    labels = ['20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80-89']
-    age_bins = pd.cut(df['age'], bins=bins, labels=labels, right=True)
-
+    # Define age bins with proper labels
+    bins = [20, 30, 40, 50, 60, 70, 80]
+    labels = ['20-29', '30-39', '40-49', '50-59', '60-69', '70-79']
+    age_bins = pd.cut(df['age'], bins=bins, labels=labels, right=False)
     age_group_stats = df.groupby(age_bins)["TenYearCHD"].mean().reset_index()
-    age_group_stats.rename(columns={"age": "Age Group", "TenYearCHD": "Heart Disease Rate"}, inplace=True)
-    st.dataframe(age_group_stats)
+    age_group_stats["Heart Disease Rate (%)"] = (age_group_stats["TenYearCHD"] * 100).round(2)
+    st.dataframe(age_group_stats.rename(columns={"age": "Age Group"}).drop(columns="TenYearCHD"))
 
     st.markdown("### 🛡️ Prevention Tips:")
     st.markdown("""
@@ -121,30 +120,46 @@ elif page == "Prediction":
 
     st.markdown("### 🧾 Enter Patient Info")
 
-    # Input features to use
-    input_features = ['male', 'age', 'cigsPerDay', 'BPMeds', 'prevalentStroke', 'prevalentHyp', 
-                      'totChol', 'sysBP', 'diaBP', 'BMI']
+    input_features = ['male', 'age', 'cigsPerDay', 'BPMeds', 'prevalentStroke',
+                      'prevalentHyp', 'totChol', 'sysBP', 'diaBP', 'BMI']
+
     user_input = {}
-
     for col in input_features:
-        min_val = float(df[col].min())
-        max_val = float(df[col].max())
-        mean_val = float(df[col].mean())
-        if col in ['male', 'BPMeds', 'prevalentStroke', 'prevalentHyp']:  # binary / categorical as int sliders
-            user_input[col] = st.slider(col, int(min_val), int(max_val), int(round(mean_val)))
-        else:
-            user_input[col] = st.slider(col, min_val, max_val, mean_val)
-
-    input_df = pd.DataFrame([user_input])
+        default_val = round(float(df[col].mean()), 2)
+        user_input[col] = st.text_input(f"Enter {col}", value=str(default_val))
 
     if st.button("🚨 Predict"):
-        pred = model.predict(input_df)[0]
-        st.subheader("🔍 Result:")
-        if pred == 1:
-            st.error("⚠️ HIGH risk of heart disease.")
-        else:
-            st.success("✅ LOW risk of heart disease.")
-        st.info(f"Model Accuracy: {acc * 100:.2f}%")
+        try:
+            input_data = {}
+
+            # Convert inputs to correct types
+            for col in input_features:
+                if col in ['male', 'BPMeds', 'prevalentStroke', 'prevalentHyp']:
+                    input_data[col] = int(user_input[col])
+                else:
+                    input_data[col] = float(user_input[col])
+
+            input_df = pd.DataFrame([input_data])
+
+            # Fill missing columns with training data means
+            for col in X_train.columns:
+                if col not in input_df.columns:
+                    input_df[col] = X_train[col].mean()
+
+            # Reorder columns to match training data
+            input_df = input_df[X_train.columns]
+
+            pred = model.predict(input_df)[0]
+
+            st.subheader("🔍 Result:")
+            if pred == 1:
+                st.error("⚠️ HIGH risk of heart disease.")
+            else:
+                st.success("✅ LOW risk of heart disease.")
+            st.info(f"Model Accuracy: {acc * 100:.2f}%")
+
+        except ValueError:
+            st.error("Please enter valid numeric values for all inputs.")
 
 # -------------------- Page 4: Classification --------------------
 elif page == "Classification":
@@ -206,3 +221,4 @@ elif page == "About":
 
     ⚠️ This tool is for educational purposes and **not intended for medical diagnosis**.
     """)
+
