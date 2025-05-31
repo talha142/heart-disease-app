@@ -1,18 +1,46 @@
-# main.py (or run with `streamlit run Home.py` from the app root)
+# 🩺 Heart Disease Prediction App with Streamlit
 
-# 1️⃣ Home.py
+## 📌 Sidebar Navigation Structure
+Each page will be structured individually, and navigation will be handled using the sidebar.
+
+---
+
+### ✅ `main.py` (Main Navigation Entry Point)
+```python
 import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Understanding Heart Disease", layout="wide")
+st.set_page_config(page_title="Heart Disease Prediction App", layout="wide")
+
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Home", "EDA", "Prediction", "Classification", "About"])
+
+if page == "Home":
+    import Home
+elif page == "EDA":
+    import EDA
+elif page == "Prediction":
+    import Prediction
+elif page == "Classification":
+    import Classification
+elif page == "About":
+    import About
+```
+
+---
+
+### 🏠 `Home.py`
+```python
+import streamlit as st
+
 st.title("Understanding Heart Disease")
 
 st.header("What is Heart Disease?")
 st.write("""
-Heart disease refers to various types of conditions that can affect heart function. These include diseases of the blood vessels, heart rhythm problems (arrhythmias), and heart defects present at birth. It is one of the leading causes of death globally.
+Heart disease refers to various types of conditions that can affect heart function. These types include:
+coronary artery disease, arrhythmias, and congenital heart defects. It occurs when the heart's blood
+supply is blocked or interrupted by a build-up of fatty substances.
 
-Typically, heart disease occurs when there is a buildup of plaque in the arteries, a condition known as atherosclerosis. This buildup narrows the arteries and makes it harder for blood to flow through them.
+Understanding the symptoms and risk factors of heart disease is essential for early diagnosis and prevention.
 """)
 
 st.subheader("Common Symptoms")
@@ -36,174 +64,147 @@ st.markdown("""
 """)
 
 st.subheader("Global Age Group Impact")
-age_data = pd.DataFrame({
-    'Age Group': ['<30', '30-45', '46-60', '61-75', '76+'],
-    'Cases (%)': [5, 15, 35, 30, 15]
-})
-fig, ax = plt.subplots()
-ax.bar(age_data['Age Group'], age_data['Cases (%)'], color='salmon')
-ax.set_ylabel('Cases (%)')
-ax.set_title('Global Impact of Heart Disease by Age Group')
-st.pyplot(fig)
+st.markdown("Visualize with a bar chart or table (placeholder here).")
 
 st.subheader("How to Prevent Heart Disease")
 st.markdown("""
-- Regular physical activity
+- Regular exercise
 - Healthy diet
-- Avoid tobacco
-- Manage stress effectively
+- Avoid smoking
+- Stress management
 """)
+```
 
-# 2️⃣ EDA.py
+---
+
+### 📊 `EDA.py`
+```python
 import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
+import plotly.express as px
+import os
 
-st.title("Exploratory Data Analysis")
+st.title("📊 Exploratory Data Analysis")
 
 uploaded_file = st.file_uploader("Upload your dataset", type=["csv"])
+
+@st.cache_data
+def load_data():
+    default_path = "framingham_1.csv"
+    if os.path.exists(default_path):
+        return pd.read_csv(default_path)
+    else:
+        st.warning("Default file not found.")
+        return None
+
+df = None
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 else:
-    df = pd.read_csv("framingham_1.csv")
+    df = load_data()
 
-st.write("### Dataset Preview")
-st.dataframe(df.head())
+if df is not None:
+    st.subheader("📋 Raw Data")
+    st.dataframe(df.head())
 
-st.write("### Summary Statistics")
-st.dataframe(df.describe())
+    st.subheader("📈 Summary Statistics")
+    st.write(df.describe())
 
-st.write("### Missing Values")
-st.dataframe(df.isnull().sum())
+    st.subheader("🧼 Missing Values")
+    st.write(df.isnull().sum())
 
-if st.checkbox("Drop missing rows"):
-    df.dropna(inplace=True)
+    st.subheader("📊 Correlation Heatmap")
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.heatmap(df.corr(), annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
+    st.pyplot(fig)
 
-st.write("### Correlation Heatmap")
-fig, ax = plt.subplots(figsize=(10, 6))
-sns.heatmap(df.corr(), annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
-st.pyplot(fig)
+    st.subheader("🔎 Visualizations")
 
-# Bar Charts
-st.write("### Age vs Heart Disease")
-sns.barplot(x="age", y="TenYearCHD", data=df)
-st.pyplot()
+    if 'age' in df.columns and 'TenYearCHD' in df.columns:
+        st.markdown("**Age vs Heart Disease**")
+        fig1 = px.histogram(df, x="age", color="TenYearCHD", barmode="group")
+        st.plotly_chart(fig1)
 
-st.write("### Gender vs Heart Disease")
-sns.barplot(x="male", y="TenYearCHD", data=df)
-st.pyplot()
+    if 'male' in df.columns and 'TenYearCHD' in df.columns:
+        st.markdown("**Gender vs Risk**")
+        fig2 = px.histogram(df, x="male", color="TenYearCHD", barmode="group")
+        st.plotly_chart(fig2)
 
-st.write("### Smoking Impact")
-sns.barplot(x="cigsPerDay", y="TenYearCHD", data=df)
-st.pyplot()
+    if 'cigsPerDay' in df.columns:
+        st.markdown("**Cigarettes Per Day Distribution**")
+        fig3 = px.histogram(df, x="cigsPerDay")
+        st.plotly_chart(fig3)
 
-# 3️⃣ Prediction.py
+    if 'totChol' in df.columns and 'TenYearCHD' in df.columns:
+        st.markdown("**Cholesterol vs Heart Disease**")
+        fig4 = px.box(df, x="TenYearCHD", y="totChol", points="all")
+        st.plotly_chart(fig4)
+else:
+    st.error("Please upload a dataset or ensure 'framingham_1.csv' exists.")
+```
+
+---
+
+### 🤖 `Prediction.py`
+```python
 import streamlit as st
 import pandas as pd
 import numpy as np
-import pickle
-from sklearn.linear_model import LogisticRegression
+import joblib
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-st.title("Heart Disease Prediction")
+st.title("🤖 Heart Disease Prediction")
 
-df = pd.read_csv("framingham_1.csv")
-df.dropna(inplace=True)
+# Load dataset
+@st.cache_data
+def load_data():
+    return pd.read_csv("framingham_1.csv")
 
+df = load_data()
+
+# Select top 10 features
 features = ['male', 'age', 'cigsPerDay', 'BPMeds', 'prevalentStroke',
-       'prevalentHyp', 'totChol', 'sysBP', 'diaBP', 'BMI']
-X = df[features]
-y = df['TenYearCHD']
+            'prevalentHyp', 'totChol', 'sysBP', 'diaBP', 'BMI']
+X = df[features].dropna()
+y = df.loc[X.index, 'TenYearCHD']
 
-model_choice = st.selectbox("Select Model", ["Logistic Regression", "Decision Tree", "Random Forest", "Gradient Boosting"])
+# Sidebar inputs
+st.sidebar.header("Model Selection")
+model_name = st.sidebar.selectbox("Choose Model", ["Logistic Regression", "Decision Tree", "Random Forest", "Gradient Boosting"])
 
-input_data = []
-for feature in features:
-    val = st.slider(feature, float(df[feature].min()), float(df[feature].max()), float(df[feature].mean()))
-    input_data.append(val)
+st.sidebar.header("Input Features")
+user_input = {feature: st.sidebar.slider(feature, float(X[feature].min()), float(X[feature].max()), float(X[feature].mean())) for feature in features}
+input_df = pd.DataFrame([user_input])
 
-input_array = np.array(input_data).reshape(1, -1)
-
-# Model
-if model_choice == "Logistic Regression":
+# Model initialization
+if model_name == "Logistic Regression":
     model = LogisticRegression()
-elif model_choice == "Decision Tree":
+elif model_name == "Decision Tree":
     model = DecisionTreeClassifier()
-elif model_choice == "Random Forest":
+elif model_name == "Random Forest":
     model = RandomForestClassifier()
 else:
     model = GradientBoostingClassifier()
 
+# Train-test split and model training
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
-if st.button("Predict"):
-    result = model.predict(input_array)
-    st.write("### Prediction Result:")
-    st.success("At Risk" if result[0] == 1 else "Not at Risk")
-    st.write(f"Model Accuracy: {accuracy_score(y_test, y_pred)*100:.2f}%")
+# Prediction and results
+prediction = model.predict(input_df)[0]
+result = "At Risk" if prediction == 1 else "Not at Risk"
 
-# 4️⃣ Classification.py
-import streamlit as st
-from sklearn.metrics import confusion_matrix, classification_report
-import seaborn as sns
-import matplotlib.pyplot as plt
+st.subheader("🔍 Prediction Result")
+st.write(f"**Result:** {result}")
 
-st.title("Model Evaluation")
-
-model_choice = st.selectbox("Choose Model", ["Logistic Regression", "Decision Tree", "Random Forest", "Gradient Boosting"])
-test_size = st.slider("Test size (percentage)", 0.1, 0.5, 0.2)
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
-
-if model_choice == "Logistic Regression":
-    model = LogisticRegression()
-elif model_choice == "Decision Tree":
-    model = DecisionTreeClassifier()
-elif model_choice == "Random Forest":
-    model = RandomForestClassifier()
-else:
-    model = GradientBoostingClassifier()
-
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-st.subheader("Confusion Matrix")
-cm = confusion_matrix(y_test, y_pred)
-fig, ax = plt.subplots()
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
-ax.set_xlabel("Predicted")
-ax.set_ylabel("Actual")
-st.pyplot(fig)
-
-st.subheader("Classification Report")
-st.text(classification_report(y_test, y_pred))
-
-# 5️⃣ About.py
-import streamlit as st
-
-st.title("About This App")
-
-st.subheader("Technologies Used")
-st.markdown("""
-- Python (Pandas, NumPy)
-- Matplotlib & Seaborn (for visualization)
-- Scikit-learn (ML Models)
-- Streamlit (Web App Framework)
-""")
-
-st.subheader("ML Models Used")
-st.markdown("""
-- Logistic Regression
-- Decision Tree
-- Random Forest
-- Gradient Boosting
-""")
-
-st.subheader("Resource")
-st.markdown("Dataset: [Framingham Heart Study - Kaggle](https://www.kaggle.com/datasets/)")
+st.subheader("✅ Model Accuracy")
+st.write(f"Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+```
